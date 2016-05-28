@@ -2,9 +2,32 @@
 
 open Xunit
 open Xunit.Extensions
+open FsCheck
+open FsCheck.Xunit
 open App
 
+type NonZeroOrOne = 
+  static member Value () = Arb.Default.Int32 () 
+                           |> Arb.filter (fun x -> System.Int32.MinValue <> x && x < -1 || 1 < x)
+
+type NonZeroOrOnePropertyAttribute () =
+  inherit PropertyAttribute (Arbitrary = [| typeof<NonZeroOrOne> |])
+
 module Tests =
+  [<NonZeroOrOneProperty>]
+  let ``Factors for a non zero or one number should produce the absolute value of original.`` (x : int) =
+    let expected = System.Math.Abs x
+    let actual = x |> factors |> Seq.fold (*) 1
+    expected = actual
+
+  [<NonZeroOrOneProperty>]
+  let ``Random non zero or one should not be zero or one.`` (x : int)  =
+    x < -1 || 1 < x
+
+  [<NonZeroOrOneProperty>]
+  let ``Random number should not equal Int32.MinValue.`` (x : int) =
+    System.Int32.MinValue <> x
+
   [<Theory>]
   [<InlineData(0)>]
   [<InlineData(1)>]
